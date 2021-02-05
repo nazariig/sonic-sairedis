@@ -23,6 +23,8 @@ namespace syncd
 
         public: // SelectableChannel overrides
 
+            void setName(const std::string& name);
+
             virtual bool empty() override;
 
             virtual void pop(

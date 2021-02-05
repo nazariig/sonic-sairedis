@@ -33,6 +33,8 @@
     }\
 }
 
+static bool gObjectRefCounting = false;
+
 using namespace saimeta;
 
 Meta::Meta(
@@ -1531,9 +1533,12 @@ sai_status_t Meta::get(
     {
         sai_object_id_t switch_id = switchIdQuery(object_id);
 
-        if (!m_oids.objectReferenceExists(switch_id))
+        if (gObjectRefCounting)
         {
-            SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", switch_id);
+            if (!m_oids.objectReferenceExists(switch_id))
+            {
+                SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", switch_id);
+            }
         }
 
         meta_generic_validation_post_get(meta_key, switch_id, attr_count, attr_list);
@@ -1574,12 +1579,15 @@ sai_status_t Meta::flushFdbEntries(
         return SAI_STATUS_INVALID_PARAMETER;
     }
 
-    if (!m_oids.objectReferenceExists(switch_id))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("switch id %s doesn't exist",
-                sai_serialize_object_id(switch_id).c_str());
+        if (!m_oids.objectReferenceExists(switch_id))
+        {
+            SWSS_LOG_ERROR("switch id %s doesn't exist",
+                    sai_serialize_object_id(switch_id).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     // validate attributes
@@ -2917,12 +2925,15 @@ sai_status_t Meta::meta_generic_validation_remove(
 {
     SWSS_LOG_ENTER();
 
-    if (!m_saiObjectCollection.objectExists(meta_key))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                sai_serialize_object_meta_key(meta_key).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key))
+        {
+            SWSS_LOG_ERROR("object key %s doesn't exist",
+                    sai_serialize_object_meta_key(meta_key).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     auto info = sai_metadata_get_object_type_info(meta_key.objecttype);
@@ -2960,11 +2971,14 @@ sai_status_t Meta::meta_generic_validation_remove(
         return SAI_STATUS_INVALID_PARAMETER;
     }
 
-    if (!m_oids.objectReferenceExists(oid))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object 0x%" PRIx64 " reference doesn't exist", oid);
+        if (!m_oids.objectReferenceExists(oid))
+        {
+            SWSS_LOG_ERROR("object 0x%" PRIx64 " reference doesn't exist", oid);
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     int count = m_oids.getObjectReferenceCount(oid);
@@ -3057,11 +3071,14 @@ bool Meta::meta_is_object_in_default_state(
     if (oid == SAI_NULL_OBJECT_ID)
         SWSS_LOG_THROW("not expected NULL object id");
 
-    if (!m_oids.objectReferenceExists(oid))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_WARN("object %s reference not exists, bug!",
-                sai_serialize_object_id(oid).c_str());
-        return false;
+        if (!m_oids.objectReferenceExists(oid))
+        {
+            SWSS_LOG_WARN("object %s refrence not exists, bug!",
+                    sai_serialize_object_id(oid).c_str());
+            return false;
+        }
     }
 
     sai_object_meta_key_t meta_key;
@@ -3199,12 +3216,15 @@ sai_status_t Meta::meta_sai_validate_oid(
 
     sai_object_meta_key_t meta_key_oid = { .objecttype = expected, .objectkey = { .key = { .object_id = oid } } };
 
-    if (!m_saiObjectCollection.objectExists(meta_key_oid))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                sai_serialize_object_meta_key(meta_key_oid).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_oid))
+        {
+            SWSS_LOG_WARN("object key %s doesn't exist",
+                    sai_serialize_object_meta_key(meta_key_oid).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     return SAI_STATUS_SUCCESS;
@@ -3487,12 +3507,15 @@ sai_status_t Meta::meta_sai_validate_fdb_entry(
 
     // set, get, remove
 
-    if (!m_saiObjectCollection.objectExists(meta_key_fdb) && !get)
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                    sai_serialize_object_meta_key(meta_key_fdb).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_fdb) && !get)
+        {
+            SWSS_LOG_WARN("object key %s doesn't exist",
+                        sai_serialize_object_meta_key(meta_key_fdb).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     // fdb entry is valid
@@ -3543,12 +3566,15 @@ sai_status_t Meta::meta_sai_validate_mcast_fdb_entry(
 
     sai_object_meta_key_t meta_key_bv = { .objecttype = object_type, .objectkey = { .key = { .object_id = bv_id } } };
 
-    if (!m_saiObjectCollection.objectExists(meta_key_bv))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                sai_serialize_object_meta_key(meta_key_bv).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_bv))
+        {
+            SWSS_LOG_WARN("object key %s doesn't exist",
+                    sai_serialize_object_meta_key(meta_key_bv).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     // check if fdb entry exists
@@ -3570,12 +3596,15 @@ sai_status_t Meta::meta_sai_validate_mcast_fdb_entry(
 
     // set, get, remove
 
-    if (!m_saiObjectCollection.objectExists(meta_key_fdb) && !get)
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                    sai_serialize_object_meta_key(meta_key_fdb).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_fdb) && !get)
+        {
+            SWSS_LOG_WARN("object key %s doesn't exist",
+                        sai_serialize_object_meta_key(meta_key_fdb).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     // fdb entry is valid
@@ -3641,12 +3670,15 @@ sai_status_t Meta::meta_sai_validate_neighbor_entry(
     sai_object_meta_key_t meta_key_rif = { .objecttype = expected, .objectkey = { .key = { .object_id = rif } } };
 
 
-    if (!m_saiObjectCollection.objectExists(meta_key_rif))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                sai_serialize_object_meta_key(meta_key_rif).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_rif))
+        {
+            SWSS_LOG_WARN("object key %s doesn't exist",
+                    sai_serialize_object_meta_key(meta_key_rif).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     sai_object_meta_key_t meta_key_neighbor = { .objecttype = SAI_OBJECT_TYPE_NEIGHBOR_ENTRY, .objectkey = { .key = { .neighbor_entry = *neighbor_entry } } };
@@ -3666,12 +3698,15 @@ sai_status_t Meta::meta_sai_validate_neighbor_entry(
 
     // set, get, remove
 
-    if (!m_saiObjectCollection.objectExists(meta_key_neighbor))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                    sai_serialize_object_meta_key(meta_key_neighbor).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_neighbor))
+        {
+            SWSS_LOG_WARN("object key %s doesn't exist",
+                        sai_serialize_object_meta_key(meta_key_neighbor).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     // neighbor entry is valid
@@ -3748,12 +3783,15 @@ sai_status_t Meta::meta_sai_validate_route_entry(
 
     sai_object_meta_key_t meta_key_vr = { .objecttype = expected, .objectkey = { .key = { .object_id = vr } } };
 
-    if (!m_saiObjectCollection.objectExists(meta_key_vr))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                sai_serialize_object_meta_key(meta_key_vr).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_vr))
+        {
+            SWSS_LOG_WARN("object key %s doesn't exist",
+                    sai_serialize_object_meta_key(meta_key_vr).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     // check if route entry exists
@@ -3775,12 +3813,15 @@ sai_status_t Meta::meta_sai_validate_route_entry(
 
     // set, get, remove
 
-    if (!m_saiObjectCollection.objectExists(meta_key_route))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                    sai_serialize_object_meta_key(meta_key_route).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_route))
+        {
+            SWSS_LOG_ERROR("object key %s doesn't exist",
+                        sai_serialize_object_meta_key(meta_key_route).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     return SAI_STATUS_SUCCESS;
@@ -3871,12 +3912,15 @@ sai_status_t Meta::meta_sai_validate_l2mc_entry(
 
     sai_object_meta_key_t meta_key_bv = { .objecttype = object_type, .objectkey = { .key = { .object_id = bv_id } } };
 
-    if (!m_saiObjectCollection.objectExists(meta_key_bv))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                sai_serialize_object_meta_key(meta_key_bv).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_bv))
+        {
+            SWSS_LOG_ERROR("object key %s doesn't exist",
+                    sai_serialize_object_meta_key(meta_key_bv).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     // check if l2mc entry exists
@@ -3898,12 +3942,15 @@ sai_status_t Meta::meta_sai_validate_l2mc_entry(
 
     // set, get, remove
 
-    if (!m_saiObjectCollection.objectExists(meta_key_route))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                    sai_serialize_object_meta_key(meta_key_route).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_route))
+        {
+            SWSS_LOG_ERROR("object key %s doesn't exist",
+                        sai_serialize_object_meta_key(meta_key_route).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     return SAI_STATUS_SUCCESS;
@@ -3994,12 +4041,15 @@ sai_status_t Meta::meta_sai_validate_ipmc_entry(
 
     sai_object_meta_key_t meta_key_bv = { .objecttype = object_type, .objectkey = { .key = { .object_id = vr_id } } };
 
-    if (!m_saiObjectCollection.objectExists(meta_key_bv))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                sai_serialize_object_meta_key(meta_key_bv).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_bv))
+        {
+            SWSS_LOG_ERROR("object key %s doesn't exist",
+                    sai_serialize_object_meta_key(meta_key_bv).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     // check if ipmc entry exists
@@ -4021,12 +4071,15 @@ sai_status_t Meta::meta_sai_validate_ipmc_entry(
 
     // set, get, remove
 
-    if (!m_saiObjectCollection.objectExists(meta_key_route))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                    sai_serialize_object_meta_key(meta_key_route).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_route))
+        {
+            SWSS_LOG_ERROR("object key %s doesn't exist",
+                        sai_serialize_object_meta_key(meta_key_route).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     return SAI_STATUS_SUCCESS;
@@ -4077,12 +4130,15 @@ sai_status_t Meta::meta_sai_validate_nat_entry(
     // check if virtual router exists
     sai_object_meta_key_t meta_key_vr = { .objecttype = expected, .objectkey = { .key = { .object_id = vr } } };
 
-    if (!m_saiObjectCollection.objectExists(meta_key_vr))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                sai_serialize_object_meta_key(meta_key_vr).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key_vr))
+        {
+            SWSS_LOG_ERROR("object key %s doesn't exist",
+                    sai_serialize_object_meta_key(meta_key_vr).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     // check if NAT entry exists
@@ -4102,12 +4158,16 @@ sai_status_t Meta::meta_sai_validate_nat_entry(
     }
 
     // set, get, remove
-    if (!m_saiObjectCollection.objectExists(meta_key_nat))
-    {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                    sai_serialize_object_meta_key(meta_key_nat).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+    if (gObjectRefCounting)
+    {
+        if (!m_saiObjectCollection.objectExists(meta_key_nat))
+        {
+            SWSS_LOG_ERROR("object key %s doesn't exist",
+                        sai_serialize_object_meta_key(meta_key_nat).c_str());
+
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     return SAI_STATUS_SUCCESS;
@@ -4215,18 +4275,21 @@ sai_status_t Meta::meta_generic_validation_create(
 
         sai_object_meta_key_t switch_meta_key = { .objecttype = SAI_OBJECT_TYPE_SWITCH, .objectkey = { .key = { .object_id = switch_id } } };
 
-        if (!m_saiObjectCollection.objectExists(switch_meta_key))
+        if (gObjectRefCounting)
         {
-            SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist yet", switch_id);
+            if (!m_saiObjectCollection.objectExists(switch_meta_key))
+            {
+                SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist yet", switch_id);
 
-            return SAI_STATUS_INVALID_PARAMETER;
-        }
+                return SAI_STATUS_INVALID_PARAMETER;
+            }
 
-        if (!m_oids.objectReferenceExists(switch_id))
-        {
-            SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist yet", switch_id);
+            if (!m_oids.objectReferenceExists(switch_id))
+            {
+                SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist yet", switch_id);
 
-            return SAI_STATUS_INVALID_PARAMETER;
+                return SAI_STATUS_INVALID_PARAMETER;
+            }
         }
 
         // ok
@@ -4949,10 +5012,13 @@ sai_status_t Meta::meta_generic_validation_set(
     {
         switch_id = switchIdQuery(meta_key.objectkey.key.object_id);
 
-        if (!m_oids.objectReferenceExists(switch_id))
+        if (gObjectRefCounting)
         {
-            SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", switch_id);
-            return SAI_STATUS_INVALID_PARAMETER;
+            if (!m_oids.objectReferenceExists(switch_id))
+            {
+                SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", switch_id);
+                return SAI_STATUS_INVALID_PARAMETER;
+            }
         }
     }
 
@@ -5315,12 +5381,15 @@ sai_status_t Meta::meta_generic_validation_set(
 
     // check if object on which we perform operation exists
 
-    if (!m_saiObjectCollection.objectExists(meta_key))
+    if (gObjectRefCounting)
     {
-        META_LOG_ERROR(md, "object key %s doesn't exist",
-                sai_serialize_object_meta_key(meta_key).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key))
+        {
+            META_LOG_ERROR(md, "object key %s doesn't exist",
+                    sai_serialize_object_meta_key(meta_key).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     // object exists in DB so we can do "set" operation
@@ -5614,12 +5683,15 @@ sai_status_t Meta::meta_generic_validation_get(
         }
     }
 
-    if (!m_saiObjectCollection.objectExists(meta_key))
+    if (gObjectRefCounting)
     {
-        SWSS_LOG_ERROR("object key %s doesn't exist",
-                sai_serialize_object_meta_key(meta_key).c_str());
+        if (!m_saiObjectCollection.objectExists(meta_key))
+        {
+            SWSS_LOG_ERROR("object key %s doesn't exist",
+                    sai_serialize_object_meta_key(meta_key).c_str());
 
-        return SAI_STATUS_INVALID_PARAMETER;
+            return SAI_STATUS_INVALID_PARAMETER;
+        }
     }
 
     auto info = sai_metadata_get_object_type_info(meta_key.objecttype);
@@ -5988,11 +6060,14 @@ sai_status_t Meta::meta_generic_validation_objlist(
             return SAI_STATUS_INVALID_PARAMETER;
         }
 
-        if (!m_oids.objectReferenceExists(oid))
+        if (gObjectRefCounting)
         {
-            META_LOG_ERROR(md, "object on list [%u] oid 0x%" PRIx64 " object type %d does not exists in local DB", i, oid, ot);
+            if (!m_oids.objectReferenceExists(oid))
+            {
+                META_LOG_ERROR(md, "object on list [%u] oid 0x%" PRIx64 " object type %d does not exists in local DB", i, oid, ot);
 
-            return SAI_STATUS_INVALID_PARAMETER;
+                return SAI_STATUS_INVALID_PARAMETER;
+            }
         }
 
         if (i > 1)
@@ -6011,10 +6086,13 @@ sai_status_t Meta::meta_generic_validation_objlist(
 
         sai_object_id_t query_switch_id = switchIdQuery(oid);
 
-        if (!m_oids.objectReferenceExists(query_switch_id))
+        if (gObjectRefCounting)
         {
-            SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", query_switch_id);
-            return SAI_STATUS_INVALID_PARAMETER;
+            if (!m_oids.objectReferenceExists(query_switch_id))
+            {
+                SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", query_switch_id);
+                return SAI_STATUS_INVALID_PARAMETER;
+            }
         }
 
         if (query_switch_id != switch_id)
@@ -6113,13 +6191,16 @@ sai_status_t Meta::meta_generic_validate_non_object_on_create(
             return SAI_STATUS_INVALID_PARAMETER;
         }
 
-        if (!m_oids.objectReferenceExists(oid))
+        if (gObjectRefCounting)
         {
-            SWSS_LOG_ERROR("object don't exist %s (%s)",
-                    sai_serialize_object_id(oid).c_str(),
-                    m->membername);
+            if (!m_oids.objectReferenceExists(oid))
+            {
+                SWSS_LOG_ERROR("object don't exist %s (%s)",
+                        sai_serialize_object_id(oid).c_str(),
+                        m->membername);
 
-            return SAI_STATUS_INVALID_PARAMETER;
+                return SAI_STATUS_INVALID_PARAMETER;
+            }
         }
 
         sai_object_type_t ot = objectTypeQuery(oid);
@@ -6150,18 +6231,21 @@ sai_status_t Meta::meta_generic_validate_non_object_on_create(
 
         sai_object_id_t oid_switch_id = switchIdQuery(oid);
 
-        if (!m_oids.objectReferenceExists(oid_switch_id))
+        if (gObjectRefCounting)
         {
-            SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", oid_switch_id);
+            if (!m_oids.objectReferenceExists(oid_switch_id))
+            {
+                SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", oid_switch_id);
 
-            return SAI_STATUS_INVALID_PARAMETER;
-        }
+                return SAI_STATUS_INVALID_PARAMETER;
+            }
 
-        if (switch_id != oid_switch_id)
-        {
-            SWSS_LOG_ERROR("oid 0x%" PRIx64 " is on switch 0x%" PRIx64 " but required switch is 0x%" PRIx64 "", oid, oid_switch_id, switch_id);
+            if (switch_id != oid_switch_id)
+            {
+                SWSS_LOG_ERROR("oid 0x%" PRIx64 " is on switch 0x%" PRIx64 " but required switch is 0x%" PRIx64 "", oid, oid_switch_id, switch_id);
 
-            return SAI_STATUS_INVALID_PARAMETER;
+                return SAI_STATUS_INVALID_PARAMETER;
+            }
         }
     }
 
@@ -6414,9 +6498,12 @@ void Meta::meta_generic_validation_post_get_objlist(
 
         sai_object_id_t query_switch_id = switchIdQuery(oid);
 
-        if (!m_oids.objectReferenceExists(query_switch_id))
+        if (gObjectRefCounting)
         {
-            SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", query_switch_id);
+            if (!m_oids.objectReferenceExists(query_switch_id))
+            {
+                SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", query_switch_id);
+            }
         }
 
         if (query_switch_id != switch_id)
@@ -6557,10 +6644,13 @@ void Meta::meta_generic_validation_post_create(
 
                 sai_object_id_t query_switch_id = switchIdQuery(meta_key.objectkey.key.object_id);
 
-                if (!m_oids.objectReferenceExists(query_switch_id))
+                if (gObjectRefCounting)
                 {
-                    SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", query_switch_id);
-                    break;
+                    if (!m_oids.objectReferenceExists(query_switch_id))
+                    {
+                        SWSS_LOG_ERROR("switch id 0x%" PRIx64 " doesn't exist", query_switch_id);
+                        break;
+                    }
                 }
 
                 if (switch_id != query_switch_id)
@@ -6736,7 +6826,10 @@ void Meta::meta_generic_validation_post_create(
                 META_LOG_THROW(md, "serialization type is not supported yet FIXME");
         }
 
-        m_saiObjectCollection.setObjectAttr(meta_key, md, attr);
+        if (gObjectRefCounting)
+        {
+            m_saiObjectCollection.setObjectAttr(meta_key, md, attr);
+        }
     }
 
     if (haskeys)
@@ -6969,7 +7062,10 @@ void Meta::meta_generic_validation_post_set(
     // only on create we need to increase entry object types members
     // save actual attributes and values to local db
 
-    m_saiObjectCollection.setObjectAttr(meta_key, md, attr);
+    if (gObjectRefCounting)
+    {
+        m_saiObjectCollection.setObjectAttr(meta_key, md, attr);
+    }
 }
 
 bool Meta::meta_unittests_get_and_erase_set_readonly_flag(
@@ -7263,11 +7359,14 @@ void Meta::meta_sai_on_fdb_event_single(
 
         case SAI_FDB_EVENT_AGED:
 
-            if (!m_saiObjectCollection.objectExists(meta_key_fdb))
+            if (gObjectRefCounting)
             {
-                SWSS_LOG_WARN("object key %s doesn't exist but received AGED event",
-                        sai_serialize_object_meta_key(meta_key_fdb).c_str());
-                break;
+                if (!m_saiObjectCollection.objectExists(meta_key_fdb))
+                {
+                    SWSS_LOG_WARN("object key %s doesn't exist but received AGED event",
+                            sai_serialize_object_meta_key(meta_key_fdb).c_str());
+                    break;
+                }
             }
 
             meta_generic_validation_post_remove(meta_key_fdb);
@@ -7282,11 +7381,14 @@ void Meta::meta_sai_on_fdb_event_single(
                 break;
             }
 
-            if (!m_saiObjectCollection.objectExists(meta_key_fdb))
+            if (gObjectRefCounting)
             {
-                SWSS_LOG_WARN("object key %s doesn't exist but received FLUSHED event",
-                        sai_serialize_object_meta_key(meta_key_fdb).c_str());
-                break;
+                if (!m_saiObjectCollection.objectExists(meta_key_fdb))
+                {
+                    SWSS_LOG_WARN("object key %s doesn't exist but received FLUSHED event",
+                            sai_serialize_object_meta_key(meta_key_fdb).c_str());
+                    break;
+                }
             }
 
             meta_generic_validation_post_remove(meta_key_fdb);
@@ -7295,11 +7397,14 @@ void Meta::meta_sai_on_fdb_event_single(
 
         case SAI_FDB_EVENT_MOVE:
 
-            if (!m_saiObjectCollection.objectExists(meta_key_fdb))
+            if (gObjectRefCounting)
             {
-                SWSS_LOG_WARN("object key %s doesn't exist but received FDB MOVE event",
-                        sai_serialize_object_meta_key(meta_key_fdb).c_str());
-                break;
+                if (!m_saiObjectCollection.objectExists(meta_key_fdb))
+                {
+                    SWSS_LOG_WARN("object key %s doesn't exist but received FDB MOVE event",
+                            sai_serialize_object_meta_key(meta_key_fdb).c_str());
+                    break;
+                }
             }
 
             // on MOVE event, just update attributes on existing entry
@@ -7691,15 +7796,18 @@ void Meta::populate(
                     break;
             }
 
-            for (uint32_t index = 0; index < count; index++)
+            if (gObjectRefCounting)
             {
-                if (!m_oids.objectReferenceExists(list[index]))
-                    m_oids.objectReferenceInsert(list[index]);
+                for (uint32_t index = 0; index < count; index++)
+                {
+                    if (!m_oids.objectReferenceExists(list[index]))
+                        m_oids.objectReferenceInsert(list[index]);
 
-                m_oids.objectReferenceIncrement(list[index]);
+                    m_oids.objectReferenceIncrement(list[index]);
+                }
+
+                m_saiObjectCollection.setObjectAttr(mk, md, attr);
             }
-
-            m_saiObjectCollection.setObjectAttr(mk, md, attr);
         }
 
         if (haskeys)

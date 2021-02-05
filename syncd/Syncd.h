@@ -23,6 +23,7 @@
 #include "swss/consumertable.h"
 #include "swss/producertable.h"
 #include "swss/notificationconsumer.h"
+#include "swss/consumersubscriber.h"
 
 #include <memory>
 
@@ -440,8 +441,6 @@ namespace syncd
 
             std::shared_ptr<syncd::NotificationProcessor> m_processor;
 
-            std::shared_ptr<SelectableChannel> m_selectableChannel;
-
             bool m_enableSyncMode;
 
         private:
@@ -479,6 +478,8 @@ namespace syncd
             std::shared_ptr<swss::DBConnector> m_dbFlexCounter;
             std::shared_ptr<swss::ConsumerTable> m_flexCounter;
             std::shared_ptr<swss::ConsumerTable> m_flexCounterGroup;
+            std::shared_ptr<swss::ConsumerSubscriber> m_consumerSubs;
+            std::shared_ptr<SelectableChannel> m_selectableChannel;
 
             std::shared_ptr<NotificationProducerBase> m_notifications;
 

@@ -19,6 +19,8 @@ namespace syncd
 
             virtual ~SelectableChannel() = default;
 
+            virtual void setName(const std::string& name) {};
+
         public:
 
             virtual bool empty() = 0;

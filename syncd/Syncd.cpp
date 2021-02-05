@@ -148,6 +148,7 @@ Syncd::Syncd(
     m_dbFlexCounter = std::make_shared<swss::DBConnector>(m_contextConfig->m_dbFlex, 0);
     m_flexCounter = std::make_shared<swss::ConsumerTable>(m_dbFlexCounter.get(), FLEX_COUNTER_TABLE);
     m_flexCounterGroup = std::make_shared<swss::ConsumerTable>(m_dbFlexCounter.get(), FLEX_COUNTER_GROUP_TABLE);
+    m_consumerSubs = std::make_shared<swss::ConsumerSubscriber>(m_dbAsic.get(), ASIC_STATE_TABLE);
 
     m_switchConfigContainer = std::make_shared<sairedis::SwitchConfigContainer>();
     m_redisVidIndexGenerator = std::make_shared<sairedis::RedisVidIndexGenerator>(m_dbAsic, REDIS_KEY_VIDCOUNTER);
@@ -4255,7 +4256,7 @@ void Syncd::run()
 
         SWSS_LOG_NOTICE("syncd listening for events");
 
-        s->addSelectable(m_selectableChannel.get());
+        s->addSelectable(m_consumerSubs.get());
         s->addSelectable(m_restartQuery.get());
         s->addSelectable(m_flexCounter.get());
         s->addSelectable(m_flexCounterGroup.get());
@@ -4296,12 +4297,16 @@ void Syncd::run()
                  * lead to unable to find some objects.
                  */
 
-                SWSS_LOG_NOTICE("is asic queue empty: %d", m_selectableChannel->empty());
+                // for (auto it: m_channels)
+                // {
+                //     SWSS_LOG_NOTICE("is asic queue %s empty: %d", it.first, it.second->empty());
 
-                while (!m_selectableChannel->empty())
-                {
-                    processEvent(*m_selectableChannel.get());
-                }
+                //     while (!it.second->empty())
+                //     {
+                //         m_selectableChannel = it.second;
+                //         processEvent(*m_selectableChannel);
+                //     }
+                // }
 
                 SWSS_LOG_NOTICE("drained queue");
 
@@ -4366,9 +4371,14 @@ void Syncd::run()
             {
                 processFlexCounterGroupEvent(*(swss::ConsumerTable*)sel);
             }
-            else if (sel == m_selectableChannel.get())
+            else if (sel == m_consumerSubs.get())
             {
-                processEvent(*m_selectableChannel.get());
+                std::string name;
+                if (m_consumerSubs->getReadyConsumerName(name))
+                {
+                    m_selectableChannel->setName(name);
+                    processEvent(*m_selectableChannel);
+                }
             }
             else
             {

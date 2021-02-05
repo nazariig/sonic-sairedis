@@ -9,6 +9,8 @@
 
 using namespace sairedis;
 
+extern char *__progname;
+
 /**
  * @brief Get response timeout in milliseconds.
  */
@@ -24,10 +26,22 @@ RedisChannel::RedisChannel(
 
     // TODO this connection info must be obtained from config
 
+    // TODO: this name should be generated uniquely as two processes
+    // may have the same name.
+    // We need to have an autoincremented key in ASIC DB that we
+    // can use to generate unique name.
+    std::string name{__progname};
+
+    SWSS_LOG_NOTICE("redis channel %s", name.c_str());
+
     m_db                    = std::make_shared<swss::DBConnector>(dbAsic, 0);
     m_redisPipeline         = std::make_shared<swss::RedisPipeline>(m_db.get()); // enable default pipeline 128
-    m_asicState             = std::make_shared<swss::ProducerTable>(m_redisPipeline.get(), ASIC_STATE_TABLE, true);
+
+    m_asicState             = std::make_shared<swss::ProducerTable>(m_redisPipeline.get(), ASIC_STATE_TABLE);
     m_getConsumer           = std::make_shared<swss::ConsumerTable>(m_db.get(), REDIS_TABLE_GETRESPONSE);
+
+    m_asicState->setQueueName(name);
+    m_getConsumer->setQueueName(name);
 
     m_dbNtf                 = std::make_shared<swss::DBConnector>(dbAsic, 0);
     m_notificationConsumer  = std::make_shared<swss::NotificationConsumer>(m_dbNtf.get(), REDIS_TABLE_NOTIFICATIONS);

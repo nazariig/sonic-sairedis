@@ -10,6 +10,7 @@ RedisSelectableChannel::RedisSelectableChannel(
         _In_ const std::string& getResponseTable,
         _In_ const std::string& tempPrefix,
         _In_ bool modifyRedis):
+    SelectableChannel(0),
     m_dbAsic(dbAsic),
     m_tempPrefix(tempPrefix),
     m_modifyRedis(modifyRedis)
@@ -29,6 +30,12 @@ RedisSelectableChannel::RedisSelectableChannel(
     m_getResponse = std::make_shared<swss::ProducerTable>(m_dbAsic.get(), getResponseTable);
 
     SWSS_LOG_NOTICE("opened redis channel");
+}
+
+void RedisSelectableChannel::setName(const std::string& name)
+{
+    m_asicState->setQueueName(name);
+    m_getResponse->setQueueName(name);
 }
 
 bool RedisSelectableChannel::empty() 
