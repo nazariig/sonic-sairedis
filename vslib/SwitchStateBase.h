@@ -55,6 +55,8 @@ namespace saivs
 
             virtual sai_status_t set_switch_default_attributes();
 
+            virtual sai_status_t create_default_hash();
+
             virtual sai_status_t create_default_vlan();
 
             virtual sai_status_t create_cpu_port();
@@ -633,6 +635,9 @@ namespace saivs
             sai_object_id_t m_default_1q_bridge;
             sai_object_id_t m_default_bridge_port_1q_router;
             sai_object_id_t m_default_vlan_id;
+
+            sai_object_id_t m_ecmp_hash_id;
+            sai_object_id_t m_lag_hash_id;
 
             std::vector<sai_object_id_t> m_system_port_list;
 

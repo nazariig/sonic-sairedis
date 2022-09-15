@@ -980,6 +980,48 @@ sai_status_t SwitchStateBase::set_switch_default_attributes()
     return set_switch_supported_object_types();
 }
 
+sai_status_t SwitchStateBase::create_default_hash()
+{
+    SWSS_LOG_ENTER();
+
+    SWSS_LOG_INFO("create default hash");
+
+    // Hash defaults according to SAI headers
+    std::vector<sai_native_hash_field_t> hfList = {
+        SAI_NATIVE_HASH_FIELD_DST_MAC,
+        SAI_NATIVE_HASH_FIELD_SRC_MAC,
+        SAI_NATIVE_HASH_FIELD_ETHERTYPE,
+        SAI_NATIVE_HASH_FIELD_IN_PORT
+    };
+
+    // create and populate default ecmp hash object
+    sai_attribute_t attr;
+    attr.id = SAI_HASH_ATTR_NATIVE_HASH_FIELD_LIST;
+    attr.value.s32list.list = reinterpret_cast<sai_int32_t*>(hfList.data());
+    attr.value.s32list.count = static_cast<sai_uint32_t>(hfList.size());
+
+    CHECK_STATUS(create(SAI_OBJECT_TYPE_HASH, &m_ecmp_hash_id, m_switch_id, 1, &attr));
+
+    // set default ecmp hash on switch
+    attr.id = SAI_SWITCH_ATTR_ECMP_HASH;
+    attr.value.oid = m_ecmp_hash_id;
+
+    CHECK_STATUS(set(SAI_OBJECT_TYPE_SWITCH, m_switch_id, &attr));
+
+    // create and populate default lag hash object
+    attr.id = SAI_HASH_ATTR_NATIVE_HASH_FIELD_LIST;
+    attr.value.s32list.list = reinterpret_cast<sai_int32_t*>(hfList.data());
+    attr.value.s32list.count = static_cast<sai_uint32_t>(hfList.size());
+
+    CHECK_STATUS(create(SAI_OBJECT_TYPE_HASH, &m_lag_hash_id, m_switch_id, 1, &attr));
+
+    // set default lag hash on switch
+    attr.id = SAI_SWITCH_ATTR_LAG_HASH;
+    attr.value.oid = m_lag_hash_id;
+
+    return set(SAI_OBJECT_TYPE_SWITCH, m_switch_id, &attr);
+}
+
 sai_status_t SwitchStateBase::set_static_crm_values()
 {
     SWSS_LOG_ENTER();
@@ -1608,6 +1650,7 @@ sai_status_t SwitchStateBase::initialize_default_objects(
 
     CHECK_STATUS(set_switch_mac_address());
     CHECK_STATUS(create_cpu_port());
+    CHECK_STATUS(create_default_hash());
     CHECK_STATUS(create_default_vlan());
     CHECK_STATUS(create_default_virtual_router());
     CHECK_STATUS(create_default_stp_instance());
@@ -2230,6 +2273,10 @@ sai_status_t SwitchStateBase::refresh_read_only(
             case SAI_SWITCH_ATTR_DEFAULT_VLAN_ID:
             case SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID:
             case SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID:
+                return SAI_STATUS_SUCCESS;
+
+            case SAI_SWITCH_ATTR_ECMP_HASH:
+            case SAI_SWITCH_ATTR_LAG_HASH:
                 return SAI_STATUS_SUCCESS;
 
             case SAI_SWITCH_ATTR_ACL_ENTRY_MINIMUM_PRIORITY:
