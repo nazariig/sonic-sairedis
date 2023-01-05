@@ -41,6 +41,7 @@ tests_SOURCES = main.cpp \
 				TestSwitchMLNX2700.cpp \
 				TestSwitchBCM56850.cpp \
 				TestSwitchBCM81724.cpp \
+				TestSwitchStateBase.cpp \
 				TestSwitchStateBaseMACsec.cpp \
 				TestMACsecManager.cpp
 
