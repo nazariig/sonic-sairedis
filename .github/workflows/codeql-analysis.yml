@@ -75,7 +75,7 @@ jobs:
       name: build-swss-common
       run: |
         cd ..
-        git clone https://github.com/sonic-net/sonic-swss-common
+        git clone -b ${{ github.ref_name }} https://github.com/sonic-net/sonic-swss-common
         pushd sonic-swss-common
         ./autogen.sh
         fakeroot dpkg-buildpackage -us -uc -b
