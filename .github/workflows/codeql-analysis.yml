@@ -75,8 +75,11 @@ jobs:
       name: Build sonic-swss-common
       run: |
         cd ..
-        git clone -b ${{ github.ref_name }} https://github.com/sonic-net/sonic-swss-common
+        git clone https://github.com/sonic-net/sonic-swss-common
         pushd sonic-swss-common
+        if git ls-remote -q --exit-code . ${{ github.ref_name }} >/dev/null 2>&1; then
+          git checkout ${{ github.ref_name }}
+        fi
         ./autogen.sh
         fakeroot dpkg-buildpackage -us -uc -b
         popd
