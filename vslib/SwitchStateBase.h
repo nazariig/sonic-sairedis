@@ -214,6 +214,8 @@ namespace saivs
 
             virtual sai_status_t create_qos_queues();
 
+            virtual sai_status_t set_number_of_queues();
+
             virtual sai_status_t create_scheduler_group_tree(
                     _In_ const std::vector<sai_object_id_t>& sgs,
                     _In_ sai_object_id_t port_id);

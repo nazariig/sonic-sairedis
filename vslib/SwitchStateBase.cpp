@@ -1710,6 +1710,15 @@ sai_status_t SwitchStateBase::create_qos_queues()
     return SAI_STATUS_NOT_IMPLEMENTED;
 }
 
+sai_status_t SwitchStateBase::set_number_of_queues()
+{
+    SWSS_LOG_ENTER();
+
+    SWSS_LOG_ERROR("implement in child class");
+
+    return SAI_STATUS_NOT_IMPLEMENTED;
+}
+
 sai_status_t SwitchStateBase::create_scheduler_group_tree(
         _In_ const std::vector<sai_object_id_t>& sgs,
         _In_ sai_object_id_t port_id)
@@ -1814,6 +1823,7 @@ sai_status_t SwitchStateBase::initialize_default_objects(
     CHECK_STATUS(set_acl_capabilities());
     CHECK_STATUS(create_ingress_priority_groups());
     CHECK_STATUS(create_qos_queues());
+    CHECK_STATUS(set_number_of_queues());
     CHECK_STATUS(set_maximum_number_of_childs_per_scheduler_group());
     CHECK_STATUS(set_number_of_ecmp_groups());
     CHECK_STATUS(set_switch_default_attributes());
@@ -2523,6 +2533,11 @@ sai_status_t SwitchStateBase::refresh_read_only(
                 return SAI_STATUS_SUCCESS;
 
             case SAI_SWITCH_ATTR_NUMBER_OF_ECMP_GROUPS:
+                return SAI_STATUS_SUCCESS;
+
+            case SAI_SWITCH_ATTR_NUMBER_OF_UNICAST_QUEUES:
+            case SAI_SWITCH_ATTR_NUMBER_OF_MULTICAST_QUEUES:
+            case SAI_SWITCH_ATTR_NUMBER_OF_QUEUES:
                 return SAI_STATUS_SUCCESS;
 
             case SAI_SWITCH_ATTR_PORT_NUMBER:
